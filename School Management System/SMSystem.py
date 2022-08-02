@@ -1,8 +1,8 @@
 #from cmath import exp
 #from re import sub
-from multiprocessing import Array
-from operator import truediv
-from curses.ascii import isdigit
+#from multiprocessing import Array
+#from operator import truediv
+#from curses.ascii import isdigit
 from tkinter import *
 from tkinter import ttk
 import tkinter as tk
@@ -29,10 +29,9 @@ def connection():
     conn=pymysql.connect(host='localhost', user='root', password='', db='school_db')
     return conn
 
-#Tabs in header
+#Tabs for each table
 nbTab = ttk.Notebook(root)
 nbTab.pack()
-
 
 #######################################################################################################
 #GENERAL VALIDATOR
@@ -127,6 +126,7 @@ def addStudent():
         else:
             cursor.execute("INSERT INTO STUDENTS VALUES('"+studid+"', '"+lname+"', '"+fname+"', '"+mname+"', '"+courseid+"', '"+phone+"', '"+email+"', '"+address+"')",)
             conn.commit()
+            resetStudent()
         conn.close()
         refreshTableStudent()
 
@@ -196,6 +196,10 @@ def searchStudent():
             itemsearch.append(list2[i])
             index.append(i)
     
+    if len(index) == 0:
+        messagebox.showinfo("Error", "Please input in any field to search.")
+        return
+
     command2 = " "
     for h in range(0, len(index)):
         if(len(index)-1 == h):
@@ -260,6 +264,7 @@ def updateStudent():
             address+"'WHERE STUDID='"+
             selectedStudid+"' ")
             conn.commit()
+            resetStudent()
         except:
             cursor.execute("SELECT STUDID FROM STUDENTS WHERE STUDID = '"+studid+"'")
             studidresult = cursor.fetchall()
@@ -452,6 +457,7 @@ def addInstructor():
         else:
             cursor.execute("INSERT INTO INSTRUCTOR VALUES('"+instructorid+"', '"+lname+"', '"+fname+"', '"+mname+"', '"+phone+"', '"+email+"')",)
             conn.commit()
+            resetInstructor()
         conn.close()
         refreshTableInstructor()
 
@@ -522,6 +528,10 @@ def searchInstructor():
             itemsearch.append(list2[i])
             index.append(i)
     
+    if len(index) == 0:
+        messagebox.showinfo("Error", "Please input in any field to search.")
+        return
+
     for h in range(0, len(index)):
         if(len(index)-1 == h):
             command2 += (list2[index[h]].upper() +"='"+ str(list[index[h]])+"';")
@@ -581,6 +591,7 @@ def updateInstructor():
             email+"'WHERE INSTRUCTORID='"+
             selectedInstructorid+"' ")
             conn.commit()
+            resetInstructor()
         except:
             cursor.execute("SELECT INSTRUCTORID FROM INSTRUCTOR WHERE INSTRUCTORID = '"+instructorid+"'")
             instructoridresult = cursor.fetchall()
@@ -749,6 +760,7 @@ def addSection():
         else:
             cursor.execute("INSERT INTO SECTION VALUES('"+sectionno+"', '"+courseid+"', '"+daytime+"', '"+location+"')",)
             conn.commit()
+            resetSection()
         conn.close()
         refreshTableSection()
 
@@ -814,7 +826,11 @@ def searchSection():
         if bool(list[i]):
             itemsearch.append(list2[i])
             index.append(i)
-    
+
+    if len(index) == 0:
+        messagebox.showinfo("Error", "Please input in any field to search.")
+        return
+
     for h in range(0, len(index)):
         if(len(index)-1 == h):
             if(list2[index[h]].upper() == 'SECTIONNO'):
@@ -874,6 +890,7 @@ def updateSection():
             location+"'WHERE SECTIONNO='"+
             selectedSectionNo+"' ")
             conn.commit()
+            resetSection()
         except:
             cursor.execute("SELECT SECTIONNO FROM SECTION WHERE SECTIONNO = '"+sectionno+"'")
             sectionnoresult = cursor.fetchall()
@@ -1016,6 +1033,7 @@ def addCourse():
         else:
             cursor.execute("INSERT INTO COURSE VALUES('"+courseid+"', '"+coursename+"')",)
             conn.commit()
+            resetCourse()
         conn.close()
         refreshTableCourse()
 
@@ -1077,6 +1095,10 @@ def searchCourse():
             itemsearch.append(list2[i])
             index.append(i)
     
+    if len(index) == 0:
+        messagebox.showinfo("Error", "Please input in any field to search.")
+        return
+
     for h in range(0, len(index)):
         if(len(index)-1 == h):
             command2 += (list2[index[h]].upper() +"='"+ str(list[index[h]])+"';")
@@ -1126,6 +1148,7 @@ def updateCourse():
             coursename+"'WHERE COURSEID='"+
             selectedCourseID+"' ")
             conn.commit()
+            resetCourse()
         except:
             cursor.execute("SELECT COURSEID FROM COURSE WHERE COURSEID = '"+courseid+"'")
             courseidresult = cursor.fetchall()
@@ -1253,6 +1276,7 @@ def addAssign():
             cursor.execute("INSERT INTO ASSIGN VALUES('"+instructorid+"', '"+sectionno+"', '"+subject+"')",)
             conn.commit()
             conn.close()
+            resetAssign()
         except:
             cursor.execute("SELECT INSTRUCTORID FROM INSTRUCTOR WHERE INSTRUCTORID = '"+instructorid+"'")
             instructoridresult = cursor.fetchall()
@@ -1262,8 +1286,10 @@ def addAssign():
                 messagebox.showinfo('ERROR', 'Instructor ID and Section Number are not valid')
             elif not instructoridresult:
                 messagebox.showinfo("ERROR", "Instructor ID are not valid")
-            else:
+            elif not sectionnoresult:
                 messagebox.showinfo("ERROR", "Section Number are not valid")
+            else:
+                messagebox.showinfo("ERROR", "Instructor already assigned into the section")
         refreshTableAssign()
 
 def deleteAssign():
@@ -1272,14 +1298,27 @@ def deleteAssign():
         try:
             selected = treeAssign.selection()
             deleteitem = []
+            j=0
             for record in selected:
                 deleteitem.append(treeAssign.item(record, 'values')[0])
-            commandquery = 'DELETE FROM ASSIGN WHERE INSTRUCTORID = %s'
-            conn=connection()   
-            cursor=conn.cursor()
-            cursor.executemany(commandquery, deleteitem)
-            conn.commit()
-            conn.close()
+                deleteitem.append(treeAssign.item(record, 'values')[1])
+                deleteitem.append(treeAssign.item(record, 'values')[2])
+           # commandquery = 'DELETE FROM COURSE WHERE COURSEID = %s'
+            for i in range(0, len(deleteitem)):
+                if j == 0:
+                    commandquery = 'DELETE FROM ASSIGN WHERE INSTRUCTORID = "'+deleteitem[i]+'" AND '
+                    j += 1
+                elif j == 1:
+                    commandquery += 'SECTIONNO = '+deleteitem[i]+' AND '
+                    j += 1
+                else:
+                    j = 0
+                    commandquery += 'SUBJECT = "'+deleteitem[i]+'"'
+                    conn = connection()
+                    cursor = conn.cursor()
+                    cursor.execute(commandquery)
+                    conn.commit()
+                    conn.close()
         except:
             messagebox.showinfo('ERROR', "Sorry an error occured!")
             return
@@ -1328,6 +1367,10 @@ def searchAssign():
             itemsearch.append(list2[i])
             index.append(i)
     
+    if len(index) == 0:
+        messagebox.showinfo("Error", "Please input in any field to search.")
+        return
+
     for h in range(0, len(index)):
         if(len(index)-1 == h):
             command2 += (list2[index[h]].upper() +"='"+ str(list[index[h]])+"';")
@@ -1386,6 +1429,7 @@ def updateAssign():
             selectedAInstructorID+"' AND SECTIONNO="+
             selectedASectionNo+" ")
             conn.commit()
+            resetAssign()
         except:
             cursor.execute("SELECT INSTRUCTORID FROM INSTRUCTOR WHERE INSTRUCTORID = '"+instructorid+"'")
             instructoridresult = cursor.fetchall()
@@ -1404,8 +1448,7 @@ def updateAssign():
                 messagebox.showinfo("ERROR", "Instructor ID already have assign subject into section")
             else:
                 messagebox.showinfo("ERROR", "Section Number are not valid")
-
-    conn.close()
+        conn.close()
     refreshTableAssign()
 
 def resetAssign():
@@ -1417,8 +1460,8 @@ def resetAssign():
     txtASectionNo.configure(validate="key", validatecommand=secvalid)
 
 def resetTableAssign():
-    readCourse()
-    refreshTableCourse()
+    readAssign()
+    refreshTableAssign()
 
 fAssign = ctk.CTkFrame(nbTab, width=1280, height=720, bg="#ECECEC")
 fAssign.pack()
